@@ -148,7 +148,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         // Broadcast edit command
         try {
-            val cleanReceiverId = message.receiverId.removePrefix("+")
+            val cleanReceiverId = message.receiverId.removePrefix("+").replace(" ", "").replace("-", "")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
             try {
                 channel.subscribe()
@@ -180,7 +180,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         // Broadcast delete command
         try {
-            val cleanReceiverId = message.receiverId.removePrefix("+")
+            val cleanReceiverId = message.receiverId.removePrefix("+").replace(" ", "").replace("-", "")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
             try {
                 channel.subscribe()
@@ -220,7 +220,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         // 3. Broadcast block alert command to the target so their local count increments
         try {
-            val cleanTargetId = targetUserId.removePrefix("+")
+            val cleanTargetId = targetUserId.removePrefix("+").replace(" ", "").replace("-", "")
             val channel = supabaseClient.realtime.channel("chat:$cleanTargetId")
             try {
                 channel.subscribe()
@@ -253,7 +253,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     suspend fun triggerSpamViolation(reason: String) {
         try {
-            val safeUserId = currentUserId.removePrefix("+")
+            val safeUserId = currentUserId.removePrefix("+").replace(" ", "").replace("-", "")
             supabaseClient.postgrest.rpc(
                 function = "ban_user",
                 parameters = mapOf("reason" to reason, "user_id" to safeUserId)
@@ -302,7 +302,7 @@ class ChatRepositoryImpl @Inject constructor(
 
                     if (myPhone.isEmpty()) return@collect
 
-                    val cleanMyId = myPhone.removePrefix("+")
+                    val cleanMyId = myPhone.removePrefix("+").replace(" ", "").replace("-", "")
                     val channel = supabaseClient.realtime.channel("chat:$cleanMyId")
                     activeChannel = channel
                     
@@ -378,7 +378,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     private suspend fun sendDeliveryReceipt(senderId: String, messageId: String) {
         try {
-            val cleanSenderId = senderId.removePrefix("+")
+            val cleanSenderId = senderId.removePrefix("+").replace(" ", "").replace("-", "")
             val channel = supabaseClient.realtime.channel("chat:$cleanSenderId")
             channel.broadcast(
                 event = "delivery_receipt",

@@ -25,7 +25,7 @@ class MediaUploadManager @Inject constructor(
             ?: throw IllegalArgumentException("Cannot open uri stream")
         val bytes = inputStream.use { it.readBytes() }
         
-        val safeUserId = userId.removePrefix("+")
+        val safeUserId = userId.removePrefix("+").replace(" ", "").replace("-", "")
         val path = "$safeUserId/$messageId"
         
         val bucket = storage.from("chat_media")

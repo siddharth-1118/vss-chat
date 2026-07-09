@@ -54,7 +54,7 @@ class CallSignalingManager @Inject constructor(
                 .collect { phone ->
                     if (phone.isEmpty()) return@collect
                     
-                    val cleanMyId = phone.removePrefix("+")
+                    val cleanMyId = phone.removePrefix("+").replace(" ", "").replace("-", "")
                     val channel = supabaseClient.realtime.channel("call:$cleanMyId")
                     
                     try {
@@ -66,12 +66,16 @@ class CallSignalingManager @Inject constructor(
                     
                     channel.broadcastFlow<SignalingPayload>(event = "signaling")
                         .collect { payload ->
-                            if (payload.receiverId == phone && payload.senderId != phone) {
+                            val cleanPayloadReceiver = payload.receiverId.removePrefix("+").replace(" ", "").replace("-", "")
+                            val cleanPayloadSender = payload.senderId.removePrefix("+").replace(" ", "").replace("-", "")
+                            val cleanPhone = phone.removePrefix("+").replace(" ", "").replace("-", "")
+                            if (cleanPayloadReceiver == cleanPhone && cleanPayloadSender != cleanPhone) {
                                 when (payload.type) {
                                     "OFFER" -> _activeCall.value = payload
                                     "HANGUP" -> _activeCall.value = null
                                     "ANSWER" -> {
-                                        if (_activeCall.value?.type == "OFFER" && _activeCall.value?.receiverId == payload.senderId) {
+                                        val cleanActiveCallReceiver = _activeCall.value?.receiverId?.removePrefix("+")?.replace(" ", "")?.replace("-", "")
+                                        if (_activeCall.value?.type == "OFFER" && cleanActiveCallReceiver == cleanPayloadSender) {
                                             _activeCall.value = payload
                                         }
                                     }
@@ -83,7 +87,7 @@ class CallSignalingManager @Inject constructor(
     }
 
     fun listenForIncomingSignaling(): Flow<SignalingPayload> {
-        val cleanMyId = myPhone.removePrefix("+")
+        val cleanMyId = myPhone.removePrefix("+").replace(" ", "").replace("-", "")
         val channel = supabaseClient.realtime.channel("call:$cleanMyId")
         
         scope.launch {
@@ -91,11 +95,16 @@ class CallSignalingManager @Inject constructor(
         }
 
         return channel.broadcastFlow<SignalingPayload>(event = "signaling")
-            .filter { payload -> payload.receiverId == myPhone && payload.senderId != myPhone }
+            .filter { payload ->
+                val cleanPayloadReceiver = payload.receiverId.removePrefix("+").replace(" ", "").replace("-", "")
+                val cleanPayloadSender = payload.senderId.removePrefix("+").replace(" ", "").replace("-", "")
+                val cleanPhone = myPhone.removePrefix("+").replace(" ", "").replace("-", "")
+                cleanPayloadReceiver == cleanPhone && cleanPayloadSender != cleanPhone
+            }
     }
 
     suspend fun sendSignaling(receiverId: String, type: String, sdp: String? = null, candidate: String? = null) {
-        val cleanReceiverId = receiverId.removePrefix("+")
+        val cleanReceiverId = receiverId.removePrefix("+").replace(" ", "").replace("-", "")
         val channel = supabaseClient.realtime.channel("call:$cleanReceiverId")
         try {
             channel.subscribe()
@@ -105,8 +114,8 @@ class CallSignalingManager @Inject constructor(
         channel.broadcast(
             event = "signaling",
             message = SignalingPayload(
-                senderId = myPhone,
-                receiverId = receiverId,
+                senderId = myPhone.removePrefix("+").replace(" ", "").replace("-", ""),
+                receiverId = cleanReceiverId,
                 type = type,
                 sdp = sdp,
                 candidate = candidate

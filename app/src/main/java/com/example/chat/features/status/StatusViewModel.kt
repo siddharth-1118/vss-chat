@@ -97,7 +97,7 @@ class StatusViewModel @Inject constructor(
                 val statusId = UUID.randomUUID().toString()
                 
                 // 1. Upload to Supabase Storage bucket 'status_uploads'
-                val safePhone = currentUserPhone.removePrefix("+")
+                val safePhone = currentUserPhone.removePrefix("+").replace(" ", "").replace("-", "")
                 val path = "$safePhone/$statusId"
                 val bucket = supabaseClient.storage.from("status_uploads")
                 
