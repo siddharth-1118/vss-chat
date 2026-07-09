@@ -15,11 +15,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.chat.features.status.StatusViewModel
+
 @Composable
-fun StatusTab() {
+fun StatusTab(
+    onNavigateToStatusViewer: () -> Unit,
+    viewModel: StatusViewModel = hiltViewModel()
+) {
+    val statuses by viewModel.activeStatuses.collectAsState()
+    
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.uploadStatus(uri, "New Status update!")
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
-            MyStatusItem()
+            MyStatusItem(onAddStatusClick = { launcher.launch("image/*") })
         }
         item {
             Text(
@@ -30,15 +53,45 @@ fun StatusTab() {
                 color = Color.Gray
             )
         }
-        // Mock status list would go here
+        items(statuses) { status ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToStatusViewer() }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "User: ${status.userId}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = status.caption ?: "Tap to view",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(start = 72.dp), thickness = 0.5.dp, color = Color.LightGray)
+        }
     }
 }
 
 @Composable
-fun MyStatusItem() {
+fun MyStatusItem(onAddStatusClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onAddStatusClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

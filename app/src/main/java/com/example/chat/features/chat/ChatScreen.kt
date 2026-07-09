@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -30,20 +31,37 @@ import io.github.jan.supabase.gotrue.auth
 import java.text.SimpleDateFormat
 import java.util.*
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     contactName: String,
     onNavigateBack: () -> Unit,
+    onNavigateToCall: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
-    supabaseClient: SupabaseClient // Injected for current user check
+    callViewModel: com.example.chat.features.calling.CallViewModel = hiltViewModel(),
+    supabaseClient: SupabaseClient
 ) {
     val messages by viewModel.messages.collectAsState()
     val messageText by viewModel.messageText.collectAsState()
     val isContactSaved by viewModel.isContactSaved.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    val currentUserId = supabaseClient.auth.currentUserOrNull()?.id ?: ""
+    val myPhone = viewModel.myPhone
+
+    val pickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.sendMediaMessage(uri, "IMAGE", 1024L)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { message ->
@@ -68,6 +86,20 @@ fun ChatScreen(
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
+                    actions = {
+                        IconButton(onClick = {
+                            callViewModel.startCall(viewModel.targetId)
+                            onNavigateToCall()
+                        }) {
+                            Icon(Icons.Default.Call, contentDescription = "Call", tint = Color.White)
+                        }
+                        IconButton(onClick = {
+                            callViewModel.startCall(viewModel.targetId)
+                            onNavigateToCall()
+                        }) {
+                            Icon(Icons.Default.Videocam, contentDescription = "Video Call", tint = Color.White)
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color(0xFF128C7E),
                         titleContentColor = Color.White,
@@ -83,7 +115,8 @@ fun ChatScreen(
             ChatInputBar(
                 text = messageText,
                 onTextChange = viewModel::onMessageChange,
-                onSend = viewModel::sendMessage
+                onSend = viewModel::sendMessage,
+                onAttachClick = { pickerLauncher.launch("image/*") }
             )
         }
     ) { padding ->
@@ -91,7 +124,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFECE5DD)) // WhatsApp Background Color
+                .background(Color(0xFFECE5DD))
         ) {
             LazyColumn(
                 state = listState,
@@ -100,7 +133,7 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages, key = { it.id }) { message ->
-                    val isOutgoing = message.senderId == currentUserId
+                    val isOutgoing = message.senderId == myPhone
                     MessageBubble(message = message, isOutgoing = isOutgoing)
                 }
             }
@@ -218,7 +251,8 @@ fun MessageStatusIcon(status: MessageStatus) {
 fun ChatInputBar(
     text: String,
     onTextChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onAttachClick: () -> Unit
 ) {
     Surface(
         tonalElevation = 2.dp,
@@ -241,7 +275,12 @@ fun ChatInputBar(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
-                maxLines = 4
+                maxLines = 4,
+                leadingIcon = {
+                    IconButton(onClick = onAttachClick) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach File")
+                    }
+                }
             )
             
             Spacer(modifier = Modifier.width(8.dp))

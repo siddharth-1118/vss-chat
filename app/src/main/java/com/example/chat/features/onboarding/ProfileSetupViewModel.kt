@@ -44,8 +44,8 @@ class ProfileSetupViewModel @Inject constructor(
                     )
                 )
 
-                // Save to account manager
-                accountManager.saveCurrentAccount(userId, user.phone ?: "")
+                // Save to local preferences
+                preferenceManager.saveProfileLocally(displayName, "Hey there! I am using WhatsApp.")
 
                 // Mark onboarding as complete locally
                 preferenceManager.setOnboardingComplete(true)

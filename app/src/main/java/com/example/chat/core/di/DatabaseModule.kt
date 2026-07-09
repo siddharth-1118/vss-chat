@@ -24,7 +24,9 @@ object DatabaseModule {
             context,
             ChatDatabase::class.java,
             ChatDatabase.DATABASE_NAME
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
@@ -32,4 +34,10 @@ object DatabaseModule {
 
     @Provides
     fun provideContactDao(database: ChatDatabase): com.example.chat.data.local.dao.ContactDao = database.contactDao()
+
+    @Provides
+    fun provideGroupDao(database: ChatDatabase): com.example.chat.data.local.dao.GroupDao = database.groupDao()
+
+    @Provides
+    fun provideStatusDao(database: ChatDatabase): com.example.chat.data.local.dao.StatusDao = database.statusDao()
 }

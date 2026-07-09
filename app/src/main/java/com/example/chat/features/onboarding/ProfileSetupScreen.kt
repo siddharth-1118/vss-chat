@@ -2,7 +2,7 @@ package com.example.chat.features.onboarding
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material3.*
@@ -55,7 +55,7 @@ fun ProfileSetupScreen(
             Box(
                 modifier = Modifier
                     .size(120.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clip(CircleShape)
                     .background(Color.LightGray),
                 contentAlignment = Alignment.Center
             ) {

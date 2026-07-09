@@ -23,6 +23,9 @@ sealed class Route(val route: String) {
         fun createRoute(contactId: String, contactName: String) = "chat/$contactId/$contactName"
     }
     data object ContactPicker : Route("contact_picker")
+    data object CreateGroup : Route("create_group")
+    data object StatusViewer : Route("status_viewer")
+    data object Call : Route("call")
 }
 
 @Composable
@@ -40,8 +43,10 @@ fun AppNavGraph(
     ) {
         composable(Route.Registration.route) {
             RegistrationScreen(
-                onNavigateToOtp = { phone ->
-                    navController.navigate(Route.Otp.createRoute(phone))
+                onNavigateToProfile = {
+                    navController.navigate(Route.ProfileSetup.route) {
+                        popUpTo(Route.Registration.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -75,6 +80,12 @@ fun AppNavGraph(
                 },
                 onNavigateToRegistration = {
                     navController.navigate(Route.Registration.route)
+                },
+                onNavigateToCreateGroup = {
+                    navController.navigate(Route.CreateGroup.route)
+                },
+                onNavigateToStatusViewer = {
+                    navController.navigate(Route.StatusViewer.route)
                 }
             )
         }
@@ -84,6 +95,9 @@ fun AppNavGraph(
             com.example.chat.features.chat.ChatScreen(
                 contactName = contactName,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToCall = {
+                    navController.navigate(Route.Call.route)
+                },
                 supabaseClient = supabaseClient
             )
         }
@@ -95,6 +109,21 @@ fun AppNavGraph(
                         popUpTo(Route.ContactPicker.route) { inclusive = true }
                     }
                 }
+            )
+        }
+        composable(Route.CreateGroup.route) {
+            com.example.chat.features.home.CreateGroupScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Route.StatusViewer.route) {
+            com.example.chat.features.status.StatusViewerScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Route.Call.route) {
+            com.example.chat.features.calling.CallScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

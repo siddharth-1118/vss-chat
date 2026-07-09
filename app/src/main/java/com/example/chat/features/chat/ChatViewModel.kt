@@ -13,10 +13,13 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: ChatRepositoryImpl,
+    private val mediaUploadManager: com.example.chat.data.media.MediaUploadManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val contactId: String = checkNotNull(savedStateHandle["contactId"])
+    val targetId: String get() = contactId
+    val myPhone: String get() = repository.currentUserPhone
     
     private val _messageText = MutableStateFlow("")
     val messageText: StateFlow<String> = _messageText.asStateFlow()
@@ -70,6 +73,31 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             repository.reportAndBlock(contactId, contactId) // Using phone as ID if real ID unknown
             _errorEvent.emit("User reported and blocked")
+        }
+    }
+
+    fun sendMediaMessage(uri: android.net.Uri, messageType: String, fileSize: Long) {
+        viewModelScope.launch {
+            try {
+                val messageId = java.util.UUID.randomUUID().toString()
+                
+                // Cache local cache dir
+                val localPath = mediaUploadManager.cacheMediaLocally(uri, messageId)
+                
+                // Upload to Storage
+                val remoteUrl = mediaUploadManager.uploadMedia(uri, repository.currentUserId, messageId)
+                
+                repository.sendMessage(
+                    receiverId = contactId,
+                    content = "Shared a $messageType",
+                    messageType = messageType,
+                    mediaUrl = localPath,
+                    remoteUrl = remoteUrl,
+                    fileSize = fileSize
+                )
+            } catch (e: Exception) {
+                _errorEvent.emit("Failed to upload media: ${e.message}")
+            }
         }
     }
 }

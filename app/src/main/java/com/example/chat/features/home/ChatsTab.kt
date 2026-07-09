@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,28 +19,36 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+
 data class ChatSummary(
     val id: String,
     val name: String,
     val lastMessage: String,
     val timestamp: String,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val lastMessageTime: Long = 0L
 )
 
 @Composable
 fun ChatsTab(
     onNavigateToChat: (String, String) -> Unit,
-    onNavigateToContactPicker: () -> Unit
+    onNavigateToContactPicker: () -> Unit,
+    searchQuery: String = "",
+    viewModel: ChatsViewModel = hiltViewModel()
 ) {
-    val mockChats = listOf(
-        ChatSummary("1", "John Doe", "Hey, how are you?", "10:45 AM", 2),
-        ChatSummary("2", "Jane Smith", "See you tomorrow!", "Yesterday", 0),
-        ChatSummary("3", "Android Dev Group", "New Kotlin 2.0 release!", "9:15 AM", 5)
-    )
+    val chats by viewModel.chatSummaries.collectAsState()
+    val filteredChats = remember(chats, searchQuery) {
+        if (searchQuery.isBlank()) chats
+        else chats.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(mockChats, key = { it.id }) { chat ->
+            items(items = filteredChats, key = { it.id }) { chat ->
                 ChatListItem(chat, onNavigateToChat)
                 HorizontalDivider(modifier = Modifier.padding(start = 72.dp), thickness = 0.5.dp, color = Color.LightGray)
             }
@@ -54,7 +64,7 @@ fun ChatsTab(
             shape = CircleShape
         ) {
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Chat,
+                imageVector = Icons.Default.Chat,
                 contentDescription = "New Chat"
             )
         }

@@ -12,7 +12,13 @@ data class MessageEntity(
     val content: String,
     val timestamp: Long,
     val status: MessageStatus,
-    val isEncrypted: Boolean = true
+    val isEncrypted: Boolean = true,
+    val messageType: String = "TEXT",
+    val mediaUrl: String? = null,
+    val remoteUrl: String? = null,
+    val fileSize: Long? = null,
+    val replyToMessageId: String? = null,
+    val isEdited: Boolean = false
 )
 
 enum class MessageStatus {

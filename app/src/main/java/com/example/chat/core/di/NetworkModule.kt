@@ -6,9 +6,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.GoTrue
+import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
 import javax.inject.Singleton
 
 @Module
@@ -26,15 +31,16 @@ object NetworkModule {
             supabaseUrl = SUPABASE_URL,
             supabaseKey = SUPABASE_KEY
         ) {
-            install(GoTrue)
+            install(Auth)
             install(Postgrest)
             install(Realtime)
+            install(Storage)
         }
     }
 
     @Provides
     @Singleton
-    fun provideSupabaseAuth(client: SupabaseClient): GoTrue = client.gotrue
+    fun provideSupabaseAuth(client: SupabaseClient): Auth = client.auth
 
     @Provides
     @Singleton
@@ -43,4 +49,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideSupabasePostgrest(client: SupabaseClient): Postgrest = client.postgrest
+
+    @Provides
+    @Singleton
+    fun provideSupabaseStorage(client: SupabaseClient): Storage = client.storage
 }

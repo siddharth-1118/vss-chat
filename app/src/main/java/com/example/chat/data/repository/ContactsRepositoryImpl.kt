@@ -14,6 +14,8 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import android.telephony.TelephonyManager
+
 @Singleton
 class ContactsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -88,9 +90,12 @@ class ContactsRepositoryImpl @Inject constructor(
 
     private fun normalizePhone(rawPhone: String): String? {
         return try {
-            val numberProto = phoneUtil.parse(rawPhone, "US") // Default to US or detect from locale
+            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val defaultCountry = telephonyManager.simCountryIso?.uppercase()?.ifEmpty { "IN" } ?: "IN"
+            val numberProto = phoneUtil.parse(rawPhone, defaultCountry)
             if (phoneUtil.isValidNumber(numberProto)) {
-                phoneUtil.format(numberProto, PhoneNumberUtil.PhoneNumberFormat.E164)
+                val e164 = phoneUtil.format(numberProto, PhoneNumberUtil.PhoneNumberFormat.E164)
+                e164.removePrefix("+")
             } else null
         } catch (e: Exception) {
             null

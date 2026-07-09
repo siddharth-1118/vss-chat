@@ -1,5 +1,5 @@
 [versions]
-agp = "8.2.2"
+agp = "8.5.0"
 kotlin = "1.9.22"
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -8,11 +8,11 @@ espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.7.0"
 activityCompose = "1.8.2"
 composeBom = "2024.02.00"
-hilt = "2.50"
-hiltNavigationCompose = "1.1.0"
-hiltWork = "1.1.0"
+hilt = "2.51.1"
+hiltNavigationCompose = "1.2.0"
+hiltWork = "1.2.0"
 room = "2.6.1"
-supabase = "2.1.0"
+supabase = "2.5.0"
 libphonenumber = "8.13.29"
 ktor = "2.3.8"
 datastore = "1.0.0"
@@ -21,6 +21,7 @@ google-auth = "20.7.0"
 google-api-drive = "v3-rev20230822-2.0.0"
 google-api-client = "2.2.0"
 security-crypto = "1.1.0-alpha06"
+kotlinx-serialization-json = "1.6.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +38,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
@@ -70,6 +72,7 @@ google-auth = { group = "com.google.android.gms", name = "play-services-auth", v
 google-api-drive = { group = "com.google.apis", name = "google-api-services-drive", version.ref = "google-api-drive" }
 google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "google-api-client" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
 
 # Ktor (Required for Supabase)
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
@@ -80,3 +83,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version = "1.9.22-1.0.17" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

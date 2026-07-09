@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.OtpType
 import io.github.jan.supabase.gotrue.providers.builtin.OTP
+import com.example.chat.core.security.AccountManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OtpViewModel @Inject constructor(
-    private val supabaseClient: SupabaseClient
+    private val supabaseClient: SupabaseClient,
+    private val accountManager: AccountManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<OtpUiState>(OtpUiState.Idle)
@@ -43,10 +46,14 @@ class OtpViewModel @Inject constructor(
             _uiState.value = OtpUiState.Loading
             try {
                 supabaseClient.auth.verifyPhoneOtp(
-                    type = OTP.SMS,
-                    phone = phone,
+                    type = OtpType.Phone.SMS,
+                    phone = phone.removePrefix("+"),
                     token = token
                 )
+                val user = supabaseClient.auth.currentUserOrNull()
+                if (user != null) {
+                    accountManager.saveCurrentAccount(user.id, phone)
+                }
                 _uiState.value = OtpUiState.Success
             } catch (e: Exception) {
                 _uiState.value = OtpUiState.Error(e.message ?: "Verification failed")
@@ -59,7 +66,7 @@ class OtpViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 supabaseClient.auth.signInWith(OTP) {
-                    this.phone = phone
+                    this.phone = phone.removePrefix("+")
                 }
                 startResendTimer()
             } catch (e: Exception) {

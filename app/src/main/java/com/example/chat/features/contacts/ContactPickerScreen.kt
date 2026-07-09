@@ -81,7 +81,11 @@ fun ContactPickerScreen(
                 actions = {
                     IconButton(onClick = { viewModel.syncContacts() }) {
                         if (isSyncing) {
-                            CircularProgressIndicator(size = 24.dp, color = Color.White)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                         }
@@ -104,7 +108,19 @@ fun ContactPickerScreen(
             ) {
                 items(contacts, key = { it.phone }) { contact ->
                     ContactItem(contact = contact, onClick = {
-                        onContactSelected(contact.phone, contact.displayName)
+                        if (contact.isAppUser) {
+                            onContactSelected(contact.phone, contact.displayName)
+                        } else {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("smsto:${contact.phone}")
+                                    putExtra("sms_body", "Hey, join me on VSS Chat! Download the app here: https://vss-chat-web.vercel.app")
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                     })
                 }
             }
@@ -152,6 +168,13 @@ fun ContactItem(contact: ContactEntity, onClick: () -> Unit) {
             Text(
                 text = "MESSAGE",
                 color = Color(0xFF128C7E),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            Text(
+                text = "INVITE",
+                color = Color.Gray,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
