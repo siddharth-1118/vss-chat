@@ -23,6 +23,8 @@ import com.example.chat.data.repository.GroupChatRepository
 import com.example.chat.ui.theme.ChatTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -42,8 +44,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var callSignalingManager: com.example.chat.data.calling.CallSignalingManager
 
+    private val _callActionFlow = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val callActionFlow = _callActionFlow.asSharedFlow()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        handleIntent(intent)
         
         // Start real-time listeners
         chatRepository.initIncomingMessageListener()
@@ -85,6 +92,29 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         val navController = rememberNavController()
+                        
+                        androidx.compose.runtime.LaunchedEffect(Unit) {
+                            callActionFlow.collect { action ->
+                                if (action == "com.example.chat.ACTION_ACCEPT_CALL") {
+                                    val active = callSignalingManager.activeCall.value
+                                    if (active != null) {
+                                        val sender = active.senderId
+                                        val acceptPayload = com.example.chat.data.calling.SignalingPayload(
+                                            senderId = callSignalingManager.myPhone,
+                                            receiverId = sender,
+                                            type = "ANSWER",
+                                            sdp = "v=0\no=- 12345 12345 IN IP4 127.0.0.1..."
+                                        )
+                                        callSignalingManager.setActiveCall(acceptPayload)
+                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                            callSignalingManager.sendSignaling(sender, "ANSWER", sdp = acceptPayload.sdp)
+                                        }
+                                    }
+                                }
+                                navController.navigate(com.example.chat.core.navigation.Route.Call.route)
+                            }
+                        }
+
                         AppNavGraph(
                             navController = navController,
                             preferenceManager = preferenceManager,
@@ -94,6 +124,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+        val action = intent?.action
+        if (action == "com.example.chat.ACTION_ACCEPT_CALL" || action == "com.example.chat.ACTION_INCOMING_CALL") {
+            _callActionFlow.tryEmit(action)
         }
     }
 }
