@@ -82,6 +82,11 @@ class GroupChatRepository @Inject constructor(
             repositoryScope.launch {
                 try {
                     val inviteChannel = supabaseClient.realtime.channel("chat:$memberId")
+                    try {
+                        inviteChannel.subscribe()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     inviteChannel.broadcast(
                         event = "group_invite",
                         message = GroupInvitePayload(groupId, title, description, myPhone, membersList)
@@ -124,6 +129,11 @@ class GroupChatRepository @Inject constructor(
 
         try {
             val channel = supabaseClient.realtime.channel("group:$groupId")
+            try {
+                channel.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             channel.broadcast(
                 event = "new_group_message",
                 message = GroupMessagePayload(
@@ -215,6 +225,18 @@ class GroupChatRepository @Inject constructor(
                             }
                         }
                         .launchIn(this)
+
+                    // Auto-subscribe to all existing groups on startup or phone switch
+                    repositoryScope.launch {
+                        try {
+                            val groups = groupDao.getAllGroupsFlow().first()
+                            groups.forEach { group ->
+                                subscribeToGroupChannel(group.groupId)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
 
                     try {
                         supabaseClient.realtime.connect()

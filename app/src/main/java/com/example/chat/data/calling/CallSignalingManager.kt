@@ -10,6 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import com.example.chat.core.security.AccountManager
@@ -33,8 +37,50 @@ class CallSignalingManager @Inject constructor(
     private val accountManager: AccountManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val myPhone: String
+    val myPhone: String
         get() = accountManager.activeAccountPhone
+
+    private val _activeCall = MutableStateFlow<SignalingPayload?>(null)
+    val activeCall: StateFlow<SignalingPayload?> = _activeCall.asStateFlow()
+
+    fun setActiveCall(payload: SignalingPayload?) {
+        _activeCall.value = payload
+    }
+
+    init {
+        scope.launch {
+            accountManager.activeAccountPhoneFlow
+                .distinctUntilChanged()
+                .collect { phone ->
+                    if (phone.isEmpty()) return@collect
+                    
+                    val cleanMyId = phone.removePrefix("+")
+                    val channel = supabaseClient.realtime.channel("call:$cleanMyId")
+                    
+                    try {
+                        supabaseClient.realtime.connect()
+                        channel.subscribe()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    channel.broadcastFlow<SignalingPayload>(event = "signaling")
+                        .collect { payload ->
+                            if (payload.receiverId == phone && payload.senderId != phone) {
+                                when (payload.type) {
+                                    "OFFER" -> _activeCall.value = payload
+                                    "HANGUP" -> _activeCall.value = null
+                                    "ANSWER" -> {
+                                        if (_activeCall.value?.type == "OFFER" && _activeCall.value?.receiverId == payload.senderId) {
+                                            _activeCall.value = payload
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                }
+        }
+    }
 
     fun listenForIncomingSignaling(): Flow<SignalingPayload> {
         val cleanMyId = myPhone.removePrefix("+")
@@ -51,7 +97,11 @@ class CallSignalingManager @Inject constructor(
     suspend fun sendSignaling(receiverId: String, type: String, sdp: String? = null, candidate: String? = null) {
         val cleanReceiverId = receiverId.removePrefix("+")
         val channel = supabaseClient.realtime.channel("call:$cleanReceiverId")
-        
+        try {
+            channel.subscribe()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         channel.broadcast(
             event = "signaling",
             message = SignalingPayload(

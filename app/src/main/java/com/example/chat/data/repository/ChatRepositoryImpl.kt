@@ -106,6 +106,11 @@ class ChatRepositoryImpl @Inject constructor(
             // 2. Transmit via Broadcast
             val cleanReceiverId = receiverId.removePrefix("+")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
+            try {
+                channel.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             channel.broadcast(
                 event = "new_message",
                 message = MessagePayload(
@@ -143,6 +148,11 @@ class ChatRepositoryImpl @Inject constructor(
         try {
             val cleanReceiverId = message.receiverId.removePrefix("+")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
+            try {
+                channel.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             channel.broadcast(
                 event = "command",
                 message = MessagePayload(
@@ -170,6 +180,11 @@ class ChatRepositoryImpl @Inject constructor(
         try {
             val cleanReceiverId = message.receiverId.removePrefix("+")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
+            try {
+                channel.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             channel.broadcast(
                 event = "command",
                 message = MessagePayload(
@@ -205,6 +220,11 @@ class ChatRepositoryImpl @Inject constructor(
         try {
             val cleanTargetId = targetUserId.removePrefix("+")
             val channel = supabaseClient.realtime.channel("chat:$cleanTargetId")
+            try {
+                channel.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             channel.broadcast(
                 event = "command",
                 message = MessagePayload(

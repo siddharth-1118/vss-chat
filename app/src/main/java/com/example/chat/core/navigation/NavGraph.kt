@@ -3,6 +3,8 @@ package com.example.chat.core.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,10 +34,38 @@ sealed class Route(val route: String) {
 fun AppNavGraph(
     navController: NavHostController,
     preferenceManager: com.example.chat.core.data.PreferenceManager,
-    supabaseClient: io.github.jan.supabase.SupabaseClient
+    supabaseClient: io.github.jan.supabase.SupabaseClient,
+    signalingManager: com.example.chat.data.calling.CallSignalingManager
 ) {
+    val context = LocalContext.current
     val isOnboardingComplete by preferenceManager.isOnboardingComplete.collectAsState(initial = false)
     val startDestination = if (isOnboardingComplete) Route.MainHub.route else Route.Registration.route
+
+    // Listen to active incoming calls globally to display CallScreen and notification service
+    LaunchedEffect(Unit) {
+        signalingManager.activeCall.collect { payload ->
+            if (payload != null) {
+                val isIncoming = payload.senderId != signalingManager.myPhone
+                if (payload.type == "OFFER" && isIncoming) {
+                    val serviceIntent = android.content.Intent(context, com.example.chat.core.service.CallNotificationService::class.java).apply {
+                        putExtra("callerName", payload.senderId)
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                    navController.navigate(Route.Call.route)
+                } else if (payload.type == "HANGUP" || payload.type == "ANSWER") {
+                    val serviceIntent = android.content.Intent(context, com.example.chat.core.service.CallNotificationService::class.java)
+                    context.stopService(serviceIntent)
+                }
+            } else {
+                val serviceIntent = android.content.Intent(context, com.example.chat.core.service.CallNotificationService::class.java)
+                context.stopService(serviceIntent)
+            }
+        }
+    }
 
     NavHost(
         navController = navController,

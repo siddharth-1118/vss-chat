@@ -3,12 +3,11 @@ package com.example.chat.features.calling
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chat.data.calling.CallSignalingManager
+import com.example.chat.data.calling.SignalingPayload
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,48 +27,59 @@ class CallViewModel @Inject constructor(
     val targetUserId: StateFlow<String?> = _targetUserId.asStateFlow()
 
     init {
-        signalingManager.listenForIncomingSignaling()
-            .onEach { payload ->
-                when (payload.type) {
-                    "OFFER" -> {
-                        _targetUserId.value = payload.senderId
-                        _callState.value = CallState.RINGING
-                    }
-                    "ANSWER" -> {
-                        _callState.value = CallState.CONNECTED
-                    }
-                    "HANGUP" -> {
-                        _callState.value = CallState.DISCONNECTED
+        viewModelScope.launch {
+            signalingManager.activeCall.collect { payload ->
+                if (payload == null) {
+                    _callState.value = CallState.DISCONNECTED
+                    _targetUserId.value = null
+                } else {
+                    val otherParty = if (payload.senderId == signalingManager.myPhone) payload.receiverId else payload.senderId
+                    _targetUserId.value = otherParty
+                    when (payload.type) {
+                        "OFFER" -> _callState.value = CallState.RINGING
+                        "ANSWER" -> _callState.value = CallState.CONNECTED
+                        "HANGUP" -> _callState.value = CallState.DISCONNECTED
+                        else -> {}
                     }
                 }
             }
-            .launchIn(viewModelScope)
+        }
     }
 
     fun startCall(receiverId: String) {
         viewModelScope.launch {
-            _targetUserId.value = receiverId
-            _callState.value = CallState.RINGING
-            signalingManager.sendSignaling(receiverId, "OFFER", sdp = "v=0\no=- 12345 12345 IN IP4 127.0.0.1...")
+            val payload = SignalingPayload(
+                senderId = signalingManager.myPhone,
+                receiverId = receiverId,
+                type = "OFFER",
+                sdp = "v=0\no=- 12345 12345 IN IP4 127.0.0.1..."
+            )
+            signalingManager.setActiveCall(payload)
+            signalingManager.sendSignaling(receiverId, "OFFER", sdp = payload.sdp)
         }
     }
 
     fun acceptCall() {
         val target = _targetUserId.value ?: return
         viewModelScope.launch {
-            _callState.value = CallState.CONNECTED
-            signalingManager.sendSignaling(target, "ANSWER", sdp = "v=0\no=- 12345 12345 IN IP4 127.0.0.1...")
+            val payload = SignalingPayload(
+                senderId = signalingManager.myPhone,
+                receiverId = target,
+                type = "ANSWER",
+                sdp = "v=0\no=- 12345 12345 IN IP4 127.0.0.1..."
+            )
+            signalingManager.setActiveCall(payload)
+            signalingManager.sendSignaling(target, "ANSWER", sdp = payload.sdp)
         }
     }
 
     fun endCall() {
         val target = _targetUserId.value
         viewModelScope.launch {
-            _callState.value = CallState.DISCONNECTED
+            signalingManager.setActiveCall(null)
             if (target != null) {
                 signalingManager.sendSignaling(target, "HANGUP")
             }
-            _targetUserId.value = null
         }
     }
 }

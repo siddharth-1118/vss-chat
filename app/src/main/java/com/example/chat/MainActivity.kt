@@ -39,6 +39,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var groupChatRepository: GroupChatRepository
 
+    @Inject
+    lateinit var callSignalingManager: com.example.chat.data.calling.CallSignalingManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -85,7 +88,8 @@ class MainActivity : ComponentActivity() {
                         AppNavGraph(
                             navController = navController,
                             preferenceManager = preferenceManager,
-                            supabaseClient = supabaseClient
+                            supabaseClient = supabaseClient,
+                            signalingManager = callSignalingManager
                         )
                     }
                 }
