@@ -68,8 +68,10 @@ class ChatRepositoryImpl @Inject constructor(
     val isBannedState = MutableStateFlow(false)
     private val blockingUsers = mutableSetOf<String>()
 
-    fun getMessages(contactId: String): Flow<List<MessageEntity>> =
-        messageDao.getMessagesForThread(contactId)
+    fun getMessages(contactId: String): Flow<List<MessageEntity>> {
+        val cleanContactId = contactId.removePrefix("+").replace(" ", "").replace("-", "")
+        return messageDao.getMessagesForThread(cleanContactId)
+    }
 
     suspend fun sendMessage(
         receiverId: String,
@@ -84,11 +86,12 @@ class ChatRepositoryImpl @Inject constructor(
 
         val messageId = UUID.randomUUID().toString()
         val timestamp = System.currentTimeMillis()
+        val cleanReceiverId = receiverId.removePrefix("+").replace(" ", "").replace("-", "")
         
         val messageEntity = MessageEntity(
             id = messageId,
             senderId = currentUserPhone,
-            receiverId = receiverId,
+            receiverId = cleanReceiverId,
             content = content,
             timestamp = timestamp,
             status = MessageStatus.SENDING,
@@ -104,7 +107,6 @@ class ChatRepositoryImpl @Inject constructor(
 
         try {
             // 2. Transmit via Broadcast
-            val cleanReceiverId = receiverId.removePrefix("+")
             val channel = supabaseClient.realtime.channel("chat:$cleanReceiverId")
             try {
                 channel.subscribe()
@@ -116,7 +118,7 @@ class ChatRepositoryImpl @Inject constructor(
                 message = MessagePayload(
                     id = messageId,
                     senderId = currentUserPhone,
-                    receiverId = receiverId,
+                    receiverId = cleanReceiverId,
                     content = content,
                     timestamp = timestamp,
                     messageType = messageType,
@@ -277,7 +279,10 @@ class ChatRepositoryImpl @Inject constructor(
         return contactDao.getContactByPhone(phone)?.isBlocked ?: false
     }
 
-    suspend fun getContactByPhone(phone: String) = contactDao.getContactByPhone(phone)
+    suspend fun getContactByPhone(phone: String): com.example.chat.data.local.entity.ContactEntity? {
+        val cleanPhone = phone.removePrefix("+").replace(" ", "").replace("-", "")
+        return contactDao.getContactByPhone(cleanPhone)
+    }
 
     private var activeChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
 
@@ -304,10 +309,12 @@ class ChatRepositoryImpl @Inject constructor(
                     channel.broadcastFlow<MessagePayload>(event = "new_message")
                         .onEach { payload ->
                             repositoryScope.launch {
+                                val cleanSenderId = payload.senderId.removePrefix("+").replace(" ", "").replace("-", "")
+                                val cleanReceiverId = payload.receiverId.removePrefix("+").replace(" ", "").replace("-", "")
                                 val entity = MessageEntity(
                                     id = payload.id,
-                                    senderId = payload.senderId,
-                                    receiverId = payload.receiverId,
+                                    senderId = cleanSenderId,
+                                    receiverId = cleanReceiverId,
                                     content = payload.content,
                                     timestamp = payload.timestamp,
                                     status = MessageStatus.DELIVERED,
